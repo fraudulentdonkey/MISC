@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday Tala!</title>
+    <!-- Include p5.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Futura, sans-serif;
+        }
+        canvas {
+            border: 2px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Responsive Animation Code
+        let blobs = [];
+        let numBlobs = 40;
+        let colors = ['#FF0000', '#0000FF', '#FFFF00'];
+        let textAlpha = 0;
+        let frameCounter = 0;
+        let exploding = false;
+        let confettiSettled = false;
+        let textExploded = false;
+        let textVisibleTime = 0;
+        let textConfetti = [];
+        let canvasSize;
+
+        function setup() {
+            // Set up responsive canvas
+            canvasSize = min(windowWidth, windowHeight) * 0.9;
+            createCanvas(canvasSize, canvasSize);
+            textAlign(CENTER, CENTER);
+            textSize(canvasSize / 10); // Scale text size to canvas
+            initializeBlobs();
+        }
+
+        function draw() {
+            background(240);
+
+            // Trigger the blob explosion after a delay
+            if (frameCounter > 200 && !exploding) {
+                explodeBlobs();
+                exploding = true;
+            }
+
+            // Display and fade in the text
+            if (exploding && !textExploded) {
+                textAlpha = min(textAlpha + 5, 255);
+                fill(0, textAlpha);
+                text("happy birthday tala", width / 2, height / 2);
+
+                // Start counting the delay after the text is fully visible
+                if (textAlpha >= 255) {
+                    textVisibleTime++;
+                }
+
+                // Explode the text after a 3-second (180-frame) delay
+                if (textVisibleTime > 180) {
+                    explodeText();
+                    textExploded = true;
+                }
+            }
+
+            // Update and draw each blob or confetti
+            for (let blob of blobs) {
+                if (!exploding) {
+                    drawBlob(blob);
+                } else {
+                    drawConfetti(blob);
+                }
+            }
+
+            // Draw text confetti falling with bounce effect
+            drawTextConfetti();
+
+            // Check if all confetti has settled and reset if needed
+            if (exploding && allConfettiSettled() && !confettiSettled) {
+                confettiSettled = true;
+                setTimeout(resetAnimation, 3000); // Wait 3 seconds before resetting
+            }
+
+            frameCounter++;
+        }
+
+        // Handle window resize for responsiveness
+        function windowResized() {
+            canvasSize = min(windowWidth, windowHeight) * 0.9;
+            resizeCanvas(canvasSize, canvasSize);
+            textSize(canvasSize / 10);
+        }
+
+        function initializeBlobs() {
+            blobs = [];
+            for (let i = 0; i < numBlobs; i++) {
+                blobs.push({
+                    x: random(width),
+                    y: random(height),
+                    size: random(canvasSize * 0.05, canvasSize * 0.1), // Adjust blob size to canvas
+                    color: random(colors),
+                    xSpeed: random(-3, 3),
+                    ySpeed: random(-3, 3),
+                    sizeChange: random(0.5, 1.5),
+                    confetti: []
+                });
+            }
+            exploding = false;
+            confettiSettled = false;
+            textExploded = false;
+            textAlpha = 0;
+            frameCounter = 0;
+            textVisibleTime = 0;
+            textConfetti = [];
+        }
+
+        function drawBlob(blob) {
+            fill(blob.color);
+            noStroke();
+            ellipse(blob.x, blob.y, blob.size, blob.size);
+
+            // Move the blob
+            blob.x += blob.xSpeed;
+            blob.y += blob.ySpeed;
+
+            // Change blob size chaotically
+            blob.size += blob.sizeChange;
+            if (blob.size > canvasSize * 0.12 || blob.size < canvasSize * 0.04) {
+                blob.sizeChange *= -1;
+            }
+
+            // Bounce blobs off edges
+            if (blob.x > width || blob.x < 0) blob.xSpeed *= -1;
+            if (blob.y > height || blob.y < 0) blob.ySpeed *= -1;
+        }
+
+        function explodeBlobs() {
+            for (let blob of blobs) {
+                for (let i = 0; i < 50; i++) {
+                    let angle = random(TWO_PI);
+                    let speed = random(1, 4);
+                    blob.confetti.push({
+                        x: blob.x,
+                        y: blob.y,
+                        xSpeed: cos(angle) * speed,
+                        ySpeed: sin(angle) * speed,
+                        color: blob.color,
+                        settled: false
+                    });
+                }
+            }
+        }
+
+        function drawConfetti(blob) {
+            for (let piece of blob.confetti) {
+                fill(piece.color);
+                ellipse(piece.x, piece.y, canvasSize * 0.01, canvasSize * 0.01); // Adjust confetti size
+
+                if (!piece.settled) {
+                    piece.ySpeed += 0.1;
+                    piece.x += piece.xSpeed;
+                    piece.y += piece.ySpeed;
+
+                    if (piece.y > height) {
+                        piece.y = height;
+                        piece.ySpeed *= -0.7;
+                        if (abs(piece.ySpeed) < 0.5) {
+                            piece.ySpeed = 0;
+                            piece.settled = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function explodeText() {
+            for (let i = 0; i < 100; i++) {
+                let angle = random(TWO_PI);
+                let speed = random(1, 4);
+                textConfetti.push({
+                    x: width / 2,
+                    y: height / 2,
+                    xSpeed: cos(angle) * speed,
+                    ySpeed: sin(angle) * speed,
+                    color: random(colors),
+                    settled: false
+                });
+            }
+        }
+
+        function drawTextConfetti() {
+            for (let piece of textConfetti) {
+                fill(piece.color);
+                ellipse(piece.x, piece.y, canvasSize * 0.02, canvasSize * 0.02);
+
+                if (!piece.settled) {
+                    piece.ySpeed += 0.01;
+                    piece.x += piece.xSpeed;
+                    piece.y += piece.ySpeed;
+
+                    if (piece.y > height) {
+                        piece.y = height;
+                        piece.ySpeed *= -0.7;
+                        if (abs(piece.ySpeed) < 0.5) {
+                            piece.ySpeed = 0;
+                            piece.settled = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function allConfettiSettled() {
+            for (let blob of blobs) {
+                for (let piece of blob.confetti) {
+                    if (!piece.settled) return false;
+                }
+            }
+            for (let piece of textConfetti) {
+                if (!piece.settled) return false;
+            }
+            return true;
+        }
+
+        function resetAnimation() {
+            initializeBlobs();
+        }
+    </script>
+</body>
+</html>
